@@ -1,0 +1,118 @@
+[skill]
+name        = "trade"
+version     = "1.0.0"
+description = "Trade any token on Solana via Jupiter — swap, price check, token search, limit orders, and DCA."
+author      = "0x01 World"
+tags        = ["jupiter", "swap", "trading", "defi", "solana", "limit-orders", "dca"]
+
+prompts = ["""
+# Jupiter Trading
+
+You can trade any Solana token directly from this agent using Jupiter's routing.
+
+## Capabilities
+
+1. **Swap** — trade_swap executes a market swap instantly. One-shot: quote + sign + broadcast.
+2. **Quote** — trade_quote checks the expected output before committing.
+3. **Price** — trade_price looks up current USD price for any token by mint address.
+4. **Token search** — trade_tokens finds a token mint by name or symbol.
+5. **Limit orders** — trade_limit_create places a buy/sell at a target price.
+   trade_limit_orders lists open orders. trade_limit_cancel cancels them.
+6. **DCA** — trade_dca_create sets up recurring buys at a fixed interval.
+
+## Amount conventions
+
+- SOL amounts: lamports (1 SOL = 1_000_000_000)
+- USDC amounts: micro-USDC (1 USDC = 1_000_000)
+- Use trade_price or trade_quote to calculate amounts before swapping.
+
+## Rules
+
+- Always confirm trade details (token, amount, expected output) with the user before executing.
+- Use trade_quote or trade_price first so the user knows what they're getting.
+- For limit orders, confirm the target price and expiry before placing.
+- For DCA, confirm total amount, per-cycle amount, and interval before creating.
+"""]
+
+[[tools]]
+name        = "trade_price"
+description = "Look up current USD price for one or more tokens by mint address."
+kind        = "shell"
+command     = """curl -s "${ZX01_NODE:-http://127.0.0.1:9090}/trade/price?ids={mints}" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[tools.args]
+mints = "Comma-separated list of base58 mint addresses"
+
+[[tools]]
+name        = "trade_tokens"
+description = "Search for a token by name or symbol to find its mint address."
+kind        = "shell"
+command     = """curl -s "${ZX01_NODE:-http://127.0.0.1:9090}/trade/tokens?q={query}" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[tools.args]
+query = "Token name or ticker symbol to search for (e.g. 'bonk' or 'USDC')"
+
+[[tools]]
+name        = "trade_quote"
+description = "Get a swap quote — expected output for a given input. Use before swapping to confirm the rate."
+kind        = "shell"
+command     = """curl -s "${ZX01_NODE:-http://127.0.0.1:9090}/trade/quote?input_mint={input_mint}&output_mint={output_mint}&amount={amount}&slippage_bps={slippage_bps}" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[tools.args]
+input_mint   = "Mint address of the token to sell"
+output_mint  = "Mint address of the token to buy"
+amount       = "Amount to sell in base units (lamports for SOL, micro-USDC for USDC)"
+slippage_bps = "Slippage tolerance in basis points (50 = 0.5%)"
+
+[[tools]]
+name        = "trade_swap"
+description = "Execute a market swap — quote, sign, and broadcast in one step. Returns txid."
+kind        = "shell"
+command     = """jq -nc --arg im {input_mint} --arg om {output_mint} --argjson amt {amount} --argjson slip {slippage_bps} '{"input_mint":$im,"output_mint":$om,"amount":$amt,"slippage_bps":$slip}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/swap" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+input_mint   = "Mint address of the token to sell"
+output_mint  = "Mint address of the token to buy"
+amount       = "Amount to sell in base units"
+slippage_bps = "Slippage in basis points (50 = 0.5%)"
+
+[[tools]]
+name        = "trade_limit_create"
+description = "Place a limit order — buy or sell at a specific price. Signs and broadcasts the order tx."
+kind        = "shell"
+command     = """jq -nc --arg im {input_mint} --arg om {output_mint} --argjson mka {making_amount} --argjson tka {taking_amount} --argjson exp {expired_at} '{"input_mint":$im,"output_mint":$om,"making_amount":$mka,"taking_amount":$tka,"expired_at":($exp|if . == 0 then null else . end)}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/limit/create" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+input_mint    = "Mint to sell"
+output_mint   = "Mint to buy"
+making_amount = "Amount of input_mint to spend (base units)"
+taking_amount = "Amount of output_mint to receive (base units) — sets your target price"
+expired_at    = "Unix timestamp when order expires (0 = never)"
+
+[[tools]]
+name        = "trade_limit_orders"
+description = "List all open limit orders for this agent wallet."
+kind        = "shell"
+command     = """curl -s "${ZX01_NODE:-http://127.0.0.1:9090}/trade/limit/orders" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "trade_limit_cancel"
+description = "Cancel one or more open limit orders by their order pubkeys."
+kind        = "shell"
+command     = """jq -nc --argjson orders {orders} '{"orders":$orders}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/limit/cancel" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+orders = "JSON array of order pubkey strings to cancel (e.g. '[\"ABC...\",\"DEF...\"]')"
+
+[[tools]]
+name        = "trade_dca_create"
+description = "Create a DCA order — recurring buys at a fixed interval. Signs and broadcasts."
+kind        = "shell"
+command     = """jq -nc --arg im {input_mint} --arg om {output_mint} --argjson total {in_amount} --argjson per_cycle {in_amount_per_cycle} --argjson secs {cycle_seconds} '{"input_mint":$im,"output_mint":$om,"in_amount":$total,"in_amount_per_cycle":$per_cycle,"cycle_seconds":$secs}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/dca/create" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+input_mint          = "Mint to sell (e.g. USDC)"
+output_mint         = "Mint to buy (e.g. SOL)"
+in_amount           = "Total amount of input_mint to DCA (base units)"
+in_amount_per_cycle = "Amount to swap each cycle (base units)"
+cycle_seconds       = "Seconds between each cycle (3600 = hourly, 86400 = daily)"

@@ -1,0 +1,74 @@
+[
+  {
+    "name": "bags",
+    "version": "1.1.0",
+    "description": "Launch and manage tokens on Bags.fm — trade, price-check, view claimable fees, and list on Dexscreener.",
+    "author": "0x01 World",
+    "tags": ["bags", "token", "launch", "defi", "solana", "fee-sharing", "trading"],
+    "requires_node": true,
+    "url": "https://skills.0x01.world/skills/bags/SKILL.toml"
+  },
+  {
+    "name": "github",
+    "version": "1.0.0",
+    "description": "Search GitHub repos, read READMEs, browse issues and PRs. No API key required for public repos.",
+    "author": "0x01 World",
+    "tags": ["github", "code", "open-source", "free"],
+    "requires_node": false,
+    "url": "https://skills.0x01.world/skills/github/SKILL.toml"
+  },
+  {
+    "name": "hn-news",
+    "version": "1.0.0",
+    "description": "Browse Hacker News — top stories, new posts, comments, and Ask HN threads. No API key required.",
+    "author": "0x01 World",
+    "tags": ["news", "hackernews", "tech", "free"],
+    "requires_node": false,
+    "url": "https://skills.0x01.world/skills/hn-news/SKILL.toml"
+  },
+  {
+    "name": "skill-manager",
+    "version": "1.2.0",
+    "description": "Install, remove, and reload zeroclaw skills without an app update. Browse the 0x01 marketplace or write any SKILL.toml from chat.",
+    "author": "0x01 World",
+    "tags": ["skills", "plugins", "extensibility", "marketplace"],
+    "requires_node": false,
+    "url": "https://skills.0x01.world/skills/skill-manager/SKILL.toml"
+  },
+  {
+    "name": "trade",
+    "version": "1.0.0",
+    "description": "Trade any token on Solana via Jupiter — swap, price check, token search, limit orders, and DCA.",
+    "author": "0x01 World",
+    "tags": ["jupiter", "swap", "trading", "defi", "solana", "limit-orders", "dca"],
+    "requires_node": true,
+    "url": "https://skills.0x01.world/skills/trade/SKILL.toml"
+  },
+  {
+    "name": "weather",
+    "version": "1.0.0",
+    "description": "Get current weather and forecasts for any city. No API key required.",
+    "author": "0x01 World",
+    "tags": ["weather", "forecast", "free"],
+    "requires_node": false,
+    "url": "https://skills.0x01.world/skills/weather/SKILL.toml"
+  },
+  {
+    "name": "web-search",
+    "version": "1.0.0",
+    "description": "Search the web and fetch page content. No API key required.",
+    "author": "0x01 World",
+    "tags": ["search", "web", "free"],
+    "requires_node": false,
+    "url": "https://skills.0x01.world/skills/web-search/SKILL.toml"
+  },
+  {
+    "name": "zerox1-mesh",
+    "version": "0.2.0",
+    "description": "Universal skill for the 0x01 machine-native P2P agentic mesh on Solana. Negotiate tasks, lock escrow, deliver work, release payment, and swap tokens — peer-to-peer without intermediaries.",
+    "author": "0x01 World",
+    "tags": ["zerox1", "solana", "mesh", "agent", "escrow", "defi", "p2p"],
+    "requires_node": true,
+    "url": "https://skills.0x01.world/skills/zerox1-mesh/SKILL.toml"
+  }
+]

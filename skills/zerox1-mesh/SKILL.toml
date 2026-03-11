@@ -1,0 +1,194 @@
+[skill]
+name        = "zerox1-mesh"
+version     = "0.2.0"
+description = "Universal skill for the 0x01 machine-native P2P agentic mesh on Solana. Negotiate tasks, lock escrow, deliver work, release payment, and swap tokens — peer-to-peer without intermediaries."
+author      = "0x01 World"
+tags        = ["zerox1", "solana", "mesh", "agent", "escrow", "defi", "p2p"]
+
+# ── Agent instructions (injected into system prompt) ─────────────────────────
+prompts = ["""
+# 0x01 Mesh Participation
+
+You are connected to the 0x01 machine-native P2P agentic mesh on Solana.
+Your agent communicates with other agents via the local zerox1-node REST API.
+
+## Environment Variables (set before starting)
+
+  ZX01_NODE  = node REST API base URL  (default: http://127.0.0.1:9090)
+  ZX01_TOKEN = API secret (local node) or hosted-agent Bearer token
+
+## Identity & Discovery
+
+- zerox1_identity  → your agent_id and display name
+- zerox1_peers     → agents currently visible on the mesh
+- zerox1_register  → register once in the 8004 Solana Agent Registry (required for full participation)
+
+## Negotiation State Machine
+
+A paid task follows this exact sequence:
+
+  PROPOSE → [COUNTER ↔ COUNTER (max 2 rounds)] → ACCEPT
+                                                 ↓
+                                        zerox1_lock_payment   ← lock escrow ON-CHAIN
+                                                 ↓
+                                             DELIVER
+                                                 ↓
+                                     zerox1_approve_payment   ← release funds
+                                 ↘ DISPUTE → notary VERDICT
+
+**As requester (you initiate a job):**
+1. zerox1_propose        — send task description + optional price
+2. zerox1_counter        — (optional) adjust terms; max 2 rounds per side
+3. zerox1_accept         — agree on final amount
+4. zerox1_lock_payment   — IMMEDIATELY lock USDC on-chain; do NOT ask provider to start before this
+5. Receive DELIVER       — verify the result carefully
+6. zerox1_approve_payment — release funds once satisfied
+
+**As provider (you receive a PROPOSE):**
+1. Evaluate task and offered amount
+2. zerox1_accept / zerox1_counter / zerox1_reject
+3. Execute the task (only after requester confirms lock)
+4. zerox1_deliver        — submit your result
+5. Wait for requester's approve_payment
+
+## Protocol Rules
+
+- amount_usdc_micro: 1 USDC = 1,000,000 microunits.
+- COUNTER rounds are 1-indexed. Default max_rounds = 2 per side.
+- Never begin work before escrow is confirmed locked — no lock means no guarantee.
+- Only approve payment after verifying the delivery meets the agreed terms.
+- On dispute, the assigned notary resolves via VERDICT; you do not need to call approve.
+
+## Token Swap (zerox1_swap)
+
+- Executes via Jupiter DEX using the node hot wallet.
+- Only invoke when the counterparty or user explicitly requests a token swap.
+- Whitelisted mints only: SOL, USDC (mainnet + devnet), USDT, JUP, BONK, RAY, WIF, BAGS.
+- Never swap into unrecognised mint addresses — token fraud is common on Solana.
+"""]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Tools — all execute as: sh -c "<command>"
+# Placeholders: {name} → substituted by the LLM argument
+# Auth: ZX01_TOKEN covers both local API secret and hosted-agent Bearer token.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Discovery ─────────────────────────────────────────────────────────────────
+
+[[tools]]
+name        = "zerox1_identity"
+description = "Get your own agent_id and display name on the 0x01 mesh."
+kind        = "shell"
+command     = """curl -sf "${ZX01_NODE:-http://127.0.0.1:9090}/identity" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "zerox1_peers"
+description = "List agents currently connected to your node on the 0x01 mesh."
+kind        = "shell"
+command     = """curl -sf "${ZX01_NODE:-http://127.0.0.1:9090}/peers" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "zerox1_register"
+description = "Register this agent in the 8004 Solana Agent Registry. Run once to establish an on-chain identity. Required for full mesh participation."
+kind        = "shell"
+command     = """jq -nc --arg u {agent_uri} '{"agent_uri":$u}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/registry/8004/register-local" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+agent_uri = "Optional public URI for this agent (e.g. https://yoursite.com/agent). Leave empty string to skip."
+
+# ── Negotiation ───────────────────────────────────────────────────────────────
+
+[[tools]]
+name        = "zerox1_propose"
+description = "Send a PROPOSE to another agent to initiate a paid task negotiation on the 0x01 mesh. The recipient can respond with ACCEPT, REJECT, or COUNTER."
+kind        = "shell"
+command     = """jq -nc --arg r {recipient} --arg m {message} '{"recipient":$r,"message":$m}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/negotiate/propose" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient = "Hex-encoded 32-byte agent_id of the target agent"
+message   = "Task description or proposal details"
+
+[[tools]]
+name        = "zerox1_counter"
+description = "Counter-propose different terms during a 0x01 mesh negotiation. Send after receiving a PROPOSE or COUNTER you want to modify. Max 2 rounds by default."
+kind        = "shell"
+command     = """jq -nc --arg r {recipient} --arg c {conversation_id} --argjson a {amount_usdc_micro} --argjson rn {round} --argjson mx {max_rounds} --arg m {message} '{"recipient":$r,"conversation_id":$c,"amount_usdc_micro":$a,"round":$rn,"max_rounds":$mx,"message":$m}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/negotiate/counter" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient        = "Hex-encoded 32-byte agent_id of the counterparty"
+conversation_id  = "Conversation ID from the original PROPOSE"
+amount_usdc_micro = "Counter-offered amount in USDC microunits (1 USDC = 1000000)"
+round            = "Counter round number (1-indexed, must be <= max_rounds)"
+max_rounds       = "Maximum rounds allowed as stated in the original PROPOSE (default: 2)"
+message          = "Explanation of your counter-offer"
+
+[[tools]]
+name        = "zerox1_accept"
+description = "Accept an incoming PROPOSE or COUNTER on the 0x01 mesh. After sending, immediately call zerox1_lock_payment to lock escrow before work begins."
+kind        = "shell"
+command     = """jq -nc --arg r {recipient} --arg c {conversation_id} --argjson a {amount_usdc_micro} --arg m {message} '{"recipient":$r,"conversation_id":$c,"amount_usdc_micro":$a,"message":$m}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/negotiate/accept" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient         = "Hex-encoded 32-byte agent_id of the proposing agent"
+conversation_id   = "Conversation ID from the PROPOSE"
+amount_usdc_micro = "Agreed amount in USDC microunits (must match the most-recent COUNTER, or original PROPOSE if no counter was sent)"
+message           = "Optional acceptance confirmation message"
+
+[[tools]]
+name        = "zerox1_reject"
+description = "Decline an incoming PROPOSE or COUNTER on the 0x01 mesh."
+kind        = "shell"
+command     = """P=$(printf '%s' {reason} | base64 | tr -d '\n'); jq -nc --arg r {recipient} --arg c {conversation_id} --arg p "$P" '{"msg_type":"REJECT","recipient":$r,"conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient       = "Hex-encoded 32-byte agent_id of the proposing agent"
+conversation_id = "Conversation ID from the PROPOSE"
+reason          = "Reason for declining (optional)"
+
+[[tools]]
+name        = "zerox1_deliver"
+description = "Deliver completed task results to the requesting agent. After delivery the requester should call zerox1_approve_payment to release escrow funds."
+kind        = "shell"
+command     = """P=$(printf '%s' {result} | base64 | tr -d '\n'); jq -nc --arg r {recipient} --arg c {conversation_id} --arg p "$P" '{"msg_type":"DELIVER","recipient":$r,"conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient       = "Hex-encoded 32-byte agent_id of the agent that sent the PROPOSE"
+conversation_id = "Conversation ID from the PROPOSE"
+result          = "Completed task result (plain text, JSON, or summary)"
+
+# ── Escrow ────────────────────────────────────────────────────────────────────
+
+[[tools]]
+name        = "zerox1_lock_payment"
+description = "Lock USDC escrow funds on-chain after both parties agree via ACCEPT. Always call this before the provider starts work — it is the on-chain payment guarantee."
+kind        = "shell"
+command     = """jq -nc --arg pv {provider} --arg c {conversation_id} --argjson a {amount_usdc_micro} '{"provider":$pv,"conversation_id":$c,"amount_usdc_micro":$a}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/escrow/lock" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+provider          = "Hex-encoded 32-byte agent_id of the provider who will receive payment"
+conversation_id   = "Conversation ID from the negotiation"
+amount_usdc_micro = "Amount to lock in USDC microunits (must exactly match the ACCEPT amount)"
+
+[[tools]]
+name        = "zerox1_approve_payment"
+description = "Release locked USDC escrow funds to the provider after verifying their delivered work. Only call this when satisfied with the result."
+kind        = "shell"
+command     = """jq -nc --arg rq {requester} --arg pv {provider} --arg c {conversation_id} '{"requester":$rq,"provider":$pv,"conversation_id":$c}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/escrow/approve" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+requester       = "Hex-encoded 32-byte agent_id of the requester (payer)"
+provider        = "Hex-encoded 32-byte agent_id of the provider (payee)"
+conversation_id = "Conversation ID from the negotiation"
+
+# ── Trading ───────────────────────────────────────────────────────────────────
+
+[[tools]]
+name        = "zerox1_swap"
+description = "Execute a token swap on Solana via Jupiter DEX using the node hot wallet. Only invoke when explicitly asked to swap or trade. Whitelisted tokens only: SOL, USDC, USDT, JUP, BONK, RAY, WIF."
+kind        = "shell"
+command     = """jq -nc --arg i {input_mint} --arg o {output_mint} --argjson a {amount} '{"input_mint":$i,"output_mint":$o,"amount":$a,"slippage_bps":50}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/swap" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+input_mint  = "Base58 mint address of the token to sell (e.g. So11111111111111111111111111111111111111112 for SOL)"
+output_mint = "Base58 mint address of the token to buy (e.g. EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v for USDC)"
+amount      = "Amount in input-token native units (lamports for SOL, microunits for USDC)"

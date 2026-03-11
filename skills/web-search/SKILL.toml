@@ -1,0 +1,43 @@
+[skill]
+name        = "web-search"
+version     = "1.0.0"
+description = "Search the web and fetch page content. No API key required."
+author      = "0x01 World"
+tags        = ["search", "web", "free"]
+
+prompts = ["""
+# Web Search
+
+Search the web via DuckDuckGo and fetch page content via a public reader API.
+
+## Tools
+
+- **web_search** — DuckDuckGo Instant Answer API. Best for factual queries, definitions, quick lookups.
+  Returns abstract text, related topics, and answer if one exists.
+- **web_fetch** — Fetch and extract readable text from any public URL (jina.ai reader proxy).
+
+## Usage tips
+
+- `web_search` returns structured JSON — extract the `Abstract`, `Answer`, and `RelatedTopics`
+- For news or recent events, `web_search` may not have results; try `web_fetch` on a news URL
+- `web_fetch` prefixes the URL with `https://r.jina.ai/` — it extracts clean text from any web page
+- Always attribute the source when presenting information to the user
+"""]
+
+[[tools]]
+name        = "web_search"
+description = "Search the web using DuckDuckGo Instant Answer API. Returns JSON with abstract, answer, related topics."
+kind        = "shell"
+command     = """curl -sf "https://api.duckduckgo.com/?q={query}&format=json&no_html=1&skip_disambig=1" """
+
+[tools.args]
+query = "Search query string (e.g. 'Solana TVL', 'what is libp2p', 'Bitcoin price history')"
+
+[[tools]]
+name        = "web_fetch"
+description = "Fetch and extract readable text content from any public web page URL."
+kind        = "shell"
+command     = """curl -sf "https://r.jina.ai/{url}" -H "Accept: text/plain" """
+
+[tools.args]
+url = "Full URL to fetch (e.g. 'https://example.com/article')"
