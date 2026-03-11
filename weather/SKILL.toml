@@ -1,0 +1,43 @@
+[skill]
+name        = "weather"
+version     = "1.0.0"
+description = "Get current weather and forecasts for any city. No API key required."
+author      = "0x01 World"
+tags        = ["weather", "forecast", "free"]
+
+prompts = ["""
+# Weather
+
+Get real-time weather and forecasts using wttr.in (no API key required).
+
+## Tools
+
+- **weather_now** — current conditions for a city (temperature, feels-like, humidity, wind, UV)
+- **weather_forecast** — 3-day forecast broken into AM/PM slots
+
+## Usage tips
+
+- City names work fine: "London", "Tokyo", "New York"
+- Airport codes also work: "LHR", "JFK"
+- For ambiguous cities add country: "Springfield, US"
+- Temperatures are returned in Celsius by default; mention Fahrenheit if the user prefers
+- Always show the full weather summary to the user — don't just show temperature
+"""]
+
+[[tools]]
+name        = "weather_now"
+description = "Get current weather conditions for a city."
+kind        = "shell"
+command     = """curl -sf "https://wttr.in/{city}?format=j1" """
+
+[tools.args]
+city = "City name or airport code (e.g. 'London', 'JFK', 'Tokyo')"
+
+[[tools]]
+name        = "weather_forecast"
+description = "Get a 3-day weather forecast for a city."
+kind        = "shell"
+command     = """curl -sf "https://wttr.in/{city}?format=j1" """
+
+[tools.args]
+city = "City name or airport code (e.g. 'Paris', 'SYD', 'New York')"

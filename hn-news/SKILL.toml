@@ -1,0 +1,63 @@
+[skill]
+name        = "hn-news"
+version     = "1.0.0"
+description = "Browse Hacker News — top stories, new posts, comments, and Ask HN threads. No API key required."
+author      = "0x01 World"
+tags        = ["news", "hackernews", "tech", "free"]
+
+prompts = ["""
+# Hacker News
+
+Browse Hacker News in real time — no API key required.
+
+## Tools
+
+- **hn_top** — fetch the top 20 story IDs from the front page
+- **hn_new** — fetch the 20 newest story IDs
+- **hn_story** — get full details for a story (title, URL, score, comment count, author, time)
+- **hn_comments** — get top-level comments for a story
+
+## Typical workflow
+
+1. Call `hn_top` to get a list of IDs
+2. Call `hn_story` for each ID you want to show the user
+3. Call `hn_comments` if the user wants to read the discussion
+
+## Tips
+
+- Stories are returned as arrays of IDs — always fetch the actual story details before presenting
+- Show: title, score, comment count, domain (extracted from URL), and age
+- For Ask HN / Show HN posts there may be no URL — use the HN item link instead:
+  `https://news.ycombinator.com/item?id={id}`
+- Don't fetch more than 10 stories at once to avoid overwhelming the user
+"""]
+
+[[tools]]
+name        = "hn_top"
+description = "Get the top 500 story IDs from Hacker News front page. Returns a JSON array of IDs."
+kind        = "shell"
+command     = """curl -sf "https://hacker-news.firebaseio.com/v0/topstories.json" """
+
+[[tools]]
+name        = "hn_new"
+description = "Get the 500 newest story IDs on Hacker News. Returns a JSON array of IDs."
+kind        = "shell"
+command     = """curl -sf "https://hacker-news.firebaseio.com/v0/newstories.json" """
+
+[[tools]]
+name        = "hn_story"
+description = "Get full details for a Hacker News item: title, URL, score, author, comment count, time."
+kind        = "shell"
+command     = """curl -sf "https://hacker-news.firebaseio.com/v0/item/{id}.json" """
+
+[tools.args]
+id = "Hacker News item ID (integer, from hn_top or hn_new results)"
+
+[[tools]]
+name        = "hn_comments"
+description = "Get top-level comment IDs and text for a Hacker News story."
+kind        = "shell"
+command     = """curl -sf "https://hacker-news.firebaseio.com/v0/item/{id}.json" """
+
+[tools.args]
+id = "Hacker News story ID"

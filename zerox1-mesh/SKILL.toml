@@ -63,7 +63,7 @@ A paid task follows this exact sequence:
 
 - Executes via Jupiter DEX using the node hot wallet.
 - Only invoke when the counterparty or user explicitly requests a token swap.
-- Whitelisted mints only: SOL, USDC (mainnet + devnet), USDT, JUP, BONK, RAY, WIF.
+- Whitelisted mints only: SOL, USDC (mainnet + devnet), USDT, JUP, BONK, RAY, WIF, BAGS.
 - Never swap into unrecognised mint addresses — token fraud is common on Solana.
 """]
 

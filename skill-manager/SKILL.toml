@@ -1,0 +1,129 @@
+[skill]
+name        = "skill-manager"
+version     = "1.2.0"
+description = "Install, remove, and reload zeroclaw skills without an app update. Browse the 0x01 marketplace or write any SKILL.toml from chat."
+author      = "0x01 World"
+tags        = ["skills", "plugins", "extensibility", "marketplace"]
+
+prompts = ["""
+# Skill Manager
+
+You can extend your own capabilities by installing new skills — no app update required.
+
+## What is a skill?
+
+A skill is a SKILL.toml file that defines:
+- A system-prompt injection (`prompts`)
+- One or more shell tools (`[[tools]]`) executed with `kind = "shell"`
+
+Tools are simple curl commands. Any REST API that can be called with curl can become a tool.
+
+## How to install a skill
+
+### Option A — Generate from scratch (most powerful)
+1. Generate the full SKILL.toml content as a string
+2. Base64-encode it: `echo "<content>" | base64`
+3. Call `skill_write` with the skill name and the base64-encoded content
+4. Call `skill_reload` — you restart and come back with the new skill active
+
+### Option B — Install from the 0x01 Marketplace
+1. Call `skill_marketplace_list` to see what's available
+2. Call `skill_marketplace_install` with the skill name to install it
+3. Call `skill_reload` — you restart with the new skill active
+
+### Option C — Install from URL
+Call `skill_install_url` with a name and HTTPS URL pointing directly to a SKILL.toml.
+Only use URLs explicitly provided by the user.
+
+## SKILL.toml format
+
+```toml
+[skill]
+name        = "my-skill"
+version     = "1.0.0"
+description = "What this skill does"
+author      = "me"
+tags        = ["tag1", "tag2"]
+
+prompts = ["""
+# Instructions for the LLM go here
+"""]
+
+[[tools]]
+name        = "my_tool"
+description = "What this tool does"
+kind        = "shell"
+command     = """curl -sf https://api.example.com/endpoint -H "Authorization: Bearer ${MY_API_KEY:-}" """
+
+[tools.args]
+param1 = "Description of param1"
+```
+
+## Rules
+- Skill names: lowercase letters, digits, hyphens, underscores only (e.g. pump-fun, helius-api). No slashes or dots.
+- Only HTTPS URLs for skill_install_url. No private/internal addresses.
+- Always call skill_reload after writing or installing so changes take effect.
+- Tell the user which tools are now available after reload.
+- Do not install skills from URLs unless the user explicitly provided the URL or found it via skill_marketplace_list.
+- When browsing the marketplace, show requires_node and free fields so the user knows what's needed.
+"""]
+
+# ── Tools ─────────────────────────────────────────────────────────────────────
+# All tools use the node REST API — no shell file operations.
+# This prevents path traversal and shell injection.
+
+[[tools]]
+name        = "skill_list"
+description = "List all installed skills."
+kind        = "shell"
+command     = """curl -sf "${ZX01_NODE:-http://127.0.0.1:9090}/skill/list" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "skill_write"
+description = "Install a new skill by writing its SKILL.toml. Pass the base64-encoded content. Call skill_reload after."
+kind        = "shell"
+command     = """jq -nc --arg n {name} --arg c {content_b64} '{"name":$n,"content_b64":$c}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/skill/write" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+name       = "Skill name: lowercase letters, digits, hyphens, underscores only (e.g. pump-fun)"
+content_b64 = "Base64-encoded SKILL.toml content (use: printf '%s' '<toml>' | base64)"
+
+[[tools]]
+name        = "skill_install_url"
+description = "Download and install a SKILL.toml from an HTTPS URL provided by the user."
+kind        = "shell"
+command     = """jq -nc --arg n {name} --arg u {url} '{"name":$n,"url":$u}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/skill/install-url" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+name = "Skill name (lowercase, hyphens ok)"
+url  = "Direct HTTPS URL to the SKILL.toml (must be provided by user)"
+
+[[tools]]
+name        = "skill_remove"
+description = "Remove an installed skill by name."
+kind        = "shell"
+command     = """jq -nc --arg n {name} '{"name":$n}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/skill/remove" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+name = "Name of the skill to remove"
+
+[[tools]]
+name        = "skill_reload"
+description = "Restart the agent brain to activate newly installed or removed skills. The agent will be back in seconds."
+kind        = "shell"
+command     = """curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/agent/reload" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "skill_marketplace_list"
+description = "Browse the 0x01 skill marketplace — returns all available skills with name, description, tags, and whether a running node or API key is required."
+kind        = "shell"
+command     = """curl -sf "https://skills.0x01.world/skills" """
+
+[[tools]]
+name        = "skill_marketplace_install"
+description = "Install a skill directly from the 0x01 marketplace by name. Call skill_reload after to activate it."
+kind        = "shell"
+command     = """jq -nc --arg n {name} --arg u "https://skills.0x01.world/skills/{name}/SKILL.toml" '{"name":$n,"url":$u}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/skill/install-url" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+name = "Skill name from the marketplace (e.g. 'weather', 'github', 'hn-news', 'web-search')"
