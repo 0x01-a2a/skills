@@ -1,0 +1,66 @@
+[skill]
+name        = "cpmm"
+version     = "1.0.0"
+description = "Create a Raydium CPMM (Constant Product) liquidity pool. Pool creator earns LP fees on every swap forever. Typical use: list a newly launched token for open trading after the bonding curve phase."
+author      = "0x01 World"
+tags        = ["raydium", "cpmm", "amm", "liquidity", "defi", "solana", "pool-creation"]
+
+prompts = ["""
+# Raydium CPMM Pool Creation
+
+You can create a Raydium CPMM liquidity pool for any token pair directly from this agent.
+The pool creator earns a share of every swap fee in proportion to their LP token holdings.
+
+## Capabilities
+
+1. **Create pool** — cpmm_create_pool deploys a new constant-product AMM pool.
+   Returns `pool_id`, `lp_mint`, and `txid`.
+
+## Cost
+
+- ~0.15 SOL Raydium pool creation fee (paid on-chain, non-refundable).
+- Plus initial liquidity: `amount_a` and `amount_b` are deposited into the pool.
+- Ensure the agent hot wallet has enough SOL to cover both.
+
+## Fee tiers (fee_config_index)
+
+| Index | Trade fee | Best for                  |
+|-------|-----------|---------------------------|
+| 0     | 0.25%     | Most tokens (default)     |
+| 1     | 0.30%     | Higher-volume pairs       |
+| 2     | 0.01%     | Stable pairs (USDC/USDT)  |
+
+## Typical workflow after a Bags token launch
+
+1. Launch token with `bags_launch`.
+2. Once the bonding curve completes or the user wants open trading, call `cpmm_create_pool`
+   with the new mint and WSOL (So11111111111111111111111111111111111111112) as `mint_b`.
+3. Share the `pool_id` — users can now swap on Raydium directly.
+
+## Amount conventions
+
+- `amount_a` / `amount_b` are in base units (lamports for SOL/WSOL, micro-USDC for USDC, etc.)
+- The price is set implicitly by the ratio: `amount_a / amount_b`.
+- `open_time = 0` means trading opens immediately after pool creation.
+
+## Rules
+
+- Always confirm the token pair, amounts, and fee tier with the user before creating.
+- Remind the user that the 0.15 SOL creation fee is non-refundable.
+- Report `pool_id` and `lp_mint` after success — the user will want to save these.
+- If broadcast fails with "insufficient funds", ask the user to top up the hot wallet.
+"""]
+
+[[tools]]
+name        = "cpmm_create_pool"
+description = "Create a Raydium CPMM liquidity pool for a token pair. Costs ~0.15 SOL creation fee plus initial liquidity. Returns pool_id, lp_mint, and txid."
+kind        = "shell"
+command     = """jq -nc --arg ma {mint_a} --arg mb {mint_b} --argjson aa {amount_a} --argjson ab {amount_b} --argjson ot {open_time} --argjson fi {fee_config_index} '{"mint_a":$ma,"mint_b":$mb,"amount_a":$aa,"amount_b":$ab,"open_time":($ot|if . == 0 then null else . end),"fee_config_index":($fi|if . == 0 then null else . end)}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/cpmm/create-pool" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+mint_a           = "Base58 mint address of the first token (e.g. newly launched token)"
+mint_b           = "Base58 mint address of the second token (e.g. WSOL: So11111111111111111111111111111111111111112)"
+amount_a         = "Initial liquidity for mint_a in base units"
+amount_b         = "Initial liquidity for mint_b in base units (sets the initial price ratio)"
+open_time        = "Unix timestamp when swapping opens (0 = immediately)"
+fee_config_index = "Raydium fee tier: 0=0.25% (default), 1=0.30%, 2=0.01% stable"

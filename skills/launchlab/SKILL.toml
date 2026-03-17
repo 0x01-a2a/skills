@@ -1,0 +1,61 @@
+[skill]
+name        = "launchlab"
+version     = "1.0.0"
+description = "Buy and sell tokens on the Raydium LaunchLab bonding curve. Earns a 0.1% share fee on every trade routed through the node — paid on-chain, no claiming required."
+author      = "0x01 World"
+tags        = ["raydium", "launchlab", "bonding-curve", "defi", "solana", "fee-sharing"]
+
+prompts = ["""
+# Raydium LaunchLab Trading
+
+You can buy and sell tokens on the Raydium LaunchLab bonding curve directly from this agent.
+Every trade earns a 0.1% share fee for the node operator, credited on-chain atomically.
+
+## Capabilities
+
+1. **Buy** — launchlab_buy spends SOL (lamports) to buy a token from its bonding curve.
+2. **Sell** — launchlab_sell sells tokens back to the bonding curve for SOL.
+
+## Amount conventions
+
+- `amount_in` for buys: lamports of SOL (1 SOL = 1_000_000_000)
+- `amount_in` for sells: token base units
+- `minimum_amount_out`: optional slippage floor; use 0 or omit for no protection
+
+## When to use
+
+- User wants to buy/sell a token that is still on its Raydium LaunchLab bonding curve
+  (not yet graduated to a full AMM pool).
+- Token must be listed on LaunchLab — verify with launchlab_buy/sell; API returns an
+  error if the token is not found.
+
+## Rules
+
+- Always confirm the mint, amount, and direction (buy/sell) with the user before executing.
+- For buys, use the current SOL price of the token to set a reasonable amount_in.
+- If a trade fails with "not found on LaunchLab", the token may have graduated — use
+  the trade skill (Jupiter swap) instead.
+- Report the `share_fee_rate` in the response (1000 = 0.1%) so users know the fee.
+"""]
+
+[[tools]]
+name        = "launchlab_buy"
+description = "Buy a token from its Raydium LaunchLab bonding curve using SOL. Returns txid and the share fee rate applied."
+kind        = "shell"
+command     = """jq -nc --arg m {mint} --argjson amt {amount_in} --argjson min_out {minimum_amount_out} '{"mint":$m,"amount_in":$amt,"minimum_amount_out":($min_out|if . == 0 then null else . end)}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/launchlab/buy" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+mint               = "Base58 mint address of the token to buy"
+amount_in          = "Lamports of SOL to spend (1 SOL = 1_000_000_000)"
+minimum_amount_out = "Minimum tokens to receive — slippage floor. Use 0 for no protection."
+
+[[tools]]
+name        = "launchlab_sell"
+description = "Sell a token back to its Raydium LaunchLab bonding curve for SOL. Returns txid and the share fee rate applied."
+kind        = "shell"
+command     = """jq -nc --arg m {mint} --argjson amt {amount_in} --argjson min_out {minimum_amount_out} '{"mint":$m,"amount_in":$amt,"minimum_amount_out":($min_out|if . == 0 then null else . end)}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/trade/launchlab/sell" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+mint               = "Base58 mint address of the token to sell"
+amount_in          = "Amount of tokens to sell (base units)"
+minimum_amount_out = "Minimum SOL lamports to receive. Use 0 for no slippage protection."

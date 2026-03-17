@@ -31,12 +31,13 @@
       display: flex;
       flex-direction: column;
       gap: 10px;
-      transition: border-color 0.15s;
+      transition: border-color 0.3s, box-shadow 0.3s;
       cursor: default;
     }
 
     .skill-card:hover {
-      border-color: var(--green);
+      border-color: rgba(0, 230, 118, 0.3);
+      box-shadow: 0 0 20px var(--glow);
     }
 
     .skill-card-header {
@@ -179,15 +180,19 @@
 
 <body>
 
+  <div class="grid-bg"></div>
+  <div class="scan-lines"></div>
+
   <!-- ── Header ─────────────────────────────────────────── -->
-  <header style="padding: 24px 0; border-bottom: 1px solid var(--border);">
-    <div class="wrap" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
-      <a href="https://0x01.world" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 12px;">
-        <img src="/logo.svg" alt="0x01" style="height: 32px; display: block;" />
-        <span style="color: var(--dim); font-size: 13px;">/ skills</span>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="site-header-logo" href="https://0x01.world">
+        <img src="/logo.svg" alt="0x01 Logo" />
+        <span>0x01 <span class="site-header-slug">/ skills</span></span>
       </a>
-      <nav style="display: flex; gap: 20px; font-size: 13px; color: var(--dim);">
+      <nav class="site-header-nav">
         <a href="https://0x01.world">Protocol</a>
+        <a href="https://0x01.world/mobile.html">Pilot</a>
         <a href="https://doc.0x01.world" target="_blank" rel="noopener">Docs</a>
         <a href="https://github.com/0x01-a2a/skills" target="_blank" rel="noopener">GitHub</a>
       </nav>
@@ -195,19 +200,19 @@
   </header>
 
   <!-- ── Hero ──────────────────────────────────────────── -->
-  <section style="padding: 60px 0 40px;">
+  <section style="padding: 60px 0 40px; position: relative; z-index: 1;">
     <div class="wrap">
       <div class="section-label">// skill_marketplace</div>
       <h1 style="color: var(--bright); font-size: clamp(28px, 6vw, 48px); font-weight: 700; line-height: 1.1; margin: 16px 0 12px; letter-spacing: -1px;">
-        Give your agent<br /><span style="color: var(--green);">new capabilities.</span>
+        Give your agent<br /><span style="color: var(--green); text-shadow: 0 0 20px var(--glow), 0 0 40px var(--glow);">new capabilities.</span>
       </h1>
       <p style="color: var(--text); font-size: 15px; max-width: 520px; line-height: 1.7; margin-bottom: 32px;">
         Skills are TOML files that extend what your 0x01 agent can do — tools, prompts, and shell commands bundled together. Install from the app or write your own.
       </p>
 
       <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px;">
-        <a class="link-btn" href="https://0x01.world/mobile.html"
-          style="border-color: var(--green); background: var(--green); color: #000; font-size: 14px; padding: 12px 24px; font-weight: 700;">
+        <a class="link-btn link-btn-primary" href="https://0x01.world/mobile.html"
+          style="font-size: 14px; padding: 12px 24px;">
           ↓ Get the App
         </a>
         <a class="link-btn" href="https://github.com/0x01-a2a/skills"
@@ -225,7 +230,7 @@
 
   <!-- ── Skills ─────────────────────────────────────────── -->
   <section style="padding-bottom: 80px;">
-    <div class="wrap">
+    <div class="wrap reveal">
       <div class="section-label">// available_skills</div>
 
       <!-- filter bar -->
@@ -264,6 +269,50 @@
           <div class="skill-install">
             <span style="color: var(--dim);">say:</span>
             <span class="cmd">"install bags"</span>
+          </div>
+        </div>
+
+        <div class="skill-card" data-tags="raydium launchlab bonding-curve defi solana fee-sharing" data-free="false" data-node="true">
+          <div class="skill-card-header">
+            <div>
+              <div class="skill-name">launchlab</div>
+              <div class="skill-version">v1.0.0</div>
+            </div>
+            <span class="skill-badge badge-node">requires node</span>
+          </div>
+          <p class="skill-desc">Buy and sell tokens on the Raydium LaunchLab bonding curve. Earns a 0.1% share fee on every trade routed through the node — paid on-chain atomically.</p>
+          <div class="skill-footer">
+            <div class="skill-tags">
+              <span class="skill-tag" data-tag="defi">defi</span>
+              <span class="skill-tag" data-tag="solana">solana</span>
+              <span class="skill-tag" data-tag="raydium">raydium</span>
+            </div>
+          </div>
+          <div class="skill-install">
+            <span style="color: var(--dim);">say:</span>
+            <span class="cmd">"install launchlab"</span>
+          </div>
+        </div>
+
+        <div class="skill-card" data-tags="raydium cpmm amm liquidity pool defi solana" data-free="false" data-node="true">
+          <div class="skill-card-header">
+            <div>
+              <div class="skill-name">cpmm</div>
+              <div class="skill-version">v1.0.0</div>
+            </div>
+            <span class="skill-badge badge-node">requires node</span>
+          </div>
+          <p class="skill-desc">Create a Raydium CPMM liquidity pool. Pool creator earns LP fees on every swap forever. Use after a Bags token launch to open trading on Raydium.</p>
+          <div class="skill-footer">
+            <div class="skill-tags">
+              <span class="skill-tag" data-tag="defi">defi</span>
+              <span class="skill-tag" data-tag="solana">solana</span>
+              <span class="skill-tag" data-tag="raydium">raydium</span>
+            </div>
+          </div>
+          <div class="skill-install">
+            <span style="color: var(--dim);">say:</span>
+            <span class="cmd">"install cpmm"</span>
           </div>
         </div>
 
@@ -425,7 +474,7 @@
 
   <!-- ── Write your own ──────────────────────────────────── -->
   <section style="border-top: 1px solid var(--border); padding: 48px 0;">
-    <div class="wrap">
+    <div class="wrap reveal">
       <div class="section-label">// build_your_own</div>
       <h2 style="color: var(--bright); font-size: 20px; margin: 16px 0 12px;">A skill is just a TOML file.</h2>
       <p style="color: var(--text); font-size: 13px; max-width: 520px; line-height: 1.7; margin-bottom: 24px;">
@@ -458,7 +507,7 @@ Instructions injected into the agent system prompt.
 <span class="obj">query</span> = <span class="str">"The search term"</span></code></pre>
       </div>
       <div style="margin-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
-        <a class="link-btn" href="https://github.com/0x01-a2a/skills" target="_blank" rel="noopener"
+        <a class="link-btn" href="https://github.com/0x01-a2a/skills/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener"
           style="border-color: var(--green); color: var(--green); font-size: 13px; padding: 10px 20px;">
           → Submit a skill on GitHub
         </a>
@@ -526,6 +575,14 @@ Instructions injected into the agent system prompt.
         }
       });
     });
+
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) entry.target.classList.add('visible')
+      })
+    }, { threshold: 0.1 })
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el))
   </script>
 
 </body>
