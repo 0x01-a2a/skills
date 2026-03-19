@@ -1,0 +1,89 @@
+[skill]
+name        = "elevenlabs"
+version     = "1.0.0"
+description = "Text-to-speech via ElevenLabs — convert any text to MP3 audio, list voices, and list models. Requires ELEVENLABS_API_KEY."
+author      = "0x01 World"
+tags        = ["tts", "voice", "audio", "speech", "elevenlabs"]
+
+prompts = ["""
+# ElevenLabs Text-to-Speech
+
+Convert text to natural-sounding speech using ElevenLabs voices.
+
+## Setup
+
+Set `ELEVENLABS_API_KEY` in your environment. Free keys available at elevenlabs.io (10 000 chars/month).
+
+## Workflow
+
+1. Call `tts_voices` to list available voices and pick a `voice_id`.
+2. Call `tts_models` to pick a model (skip if `eleven_multilingual_v2` is fine).
+3. Call `tts_speak` with the text, voice_id, and model_id.
+4. The tool returns base64-encoded MP3 audio data.
+
+## Parameters for tts_speak
+
+| Field            | Description                                                           |
+|------------------|-----------------------------------------------------------------------|
+| text             | Text to synthesize — max 5 000 characters. Split long texts if needed |
+| voice_id         | ElevenLabs voice ID (get from tts_voices)                             |
+| model_id         | Model to use. Default: `eleven_multilingual_v2`                       |
+| stability        | 0.0–1.0. Lower = more expressive, higher = consistent. Default 0.5   |
+| similarity_boost | 0.0–1.0. Higher = closer to original voice. Default 0.75             |
+
+## Available models (common)
+
+| model_id                  | Best for                        |
+|---------------------------|---------------------------------|
+| eleven_multilingual_v2    | Quality, 29 languages (default) |
+| eleven_turbo_v2_5         | Low latency, 32 languages       |
+| eleven_flash_v2_5         | Fastest, lowest cost            |
+
+## Rules
+
+- Always confirm the text and voice with the user before calling tts_speak.
+- If no voice is known, call tts_voices first so the user can choose.
+- Respect the 5 000 character limit; split long texts into multiple calls.
+- The returned base64 data is an MP3 file — relay it to audio playback as needed.
+"""]
+
+[[tools]]
+name        = "tts_speak"
+description = "Convert text to MP3 speech. Returns base64-encoded audio. Requires voice_id (from tts_voices) and model_id."
+kind        = "shell"
+command     = """jq -n \
+  --arg text {text} \
+  --arg model {model_id} \
+  --argjson stab {stability} \
+  --argjson sim {similarity_boost} \
+  '{text:$text,model_id:$model,voice_settings:{stability:$stab,similarity_boost:$sim}}' \
+| curl -sf -X POST \
+    "https://api.elevenlabs.io/v1/text-to-speech/{voice_id}" \
+    -H "xi-api-key: ${ELEVENLABS_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -H "Accept: audio/mpeg" \
+    -d @- \
+| base64"""
+
+[tools.args]
+text             = "Text to synthesize (max 5000 characters)"
+voice_id         = "ElevenLabs voice ID — get one from tts_voices"
+model_id         = "Model ID. Use eleven_multilingual_v2 (default), eleven_turbo_v2_5, or eleven_flash_v2_5"
+stability        = "Voice stability 0.0–1.0 (use 0.5 as default). Lower = more expressive"
+similarity_boost = "Similarity boost 0.0–1.0 (use 0.75 as default). Higher = closer to original voice"
+
+[[tools]]
+name        = "tts_voices"
+description = "List all available ElevenLabs voices. Returns voice_id, name, category, and labels for each voice."
+kind        = "shell"
+command     = """curl -sf "https://api.elevenlabs.io/v1/voices" \
+  -H "xi-api-key: ${ELEVENLABS_API_KEY}" \
+| jq '[.voices[] | {voice_id, name, category, labels}]'"""
+
+[[tools]]
+name        = "tts_models"
+description = "List all available ElevenLabs TTS models with model_id, name, and whether they support text-to-speech."
+kind        = "shell"
+command     = """curl -sf "https://api.elevenlabs.io/v1/models" \
+  -H "xi-api-key: ${ELEVENLABS_API_KEY}" \
+| jq '[.[] | select(.can_do_text_to_speech == true) | {model_id, name, description}]'"""
