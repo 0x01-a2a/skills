@@ -1,0 +1,63 @@
+[skill]
+name        = "persona-observe"
+version     = "1.0.0"
+description = "Passively observe owner communication style from SMS and notifications to build PERSONA.md — tone, vocabulary, formality, response patterns. Runs weekly. Never prompts the user."
+author      = "0x01 World"
+tags        = ["persona", "style", "observation", "identity", "passive", "communication"]
+
+prompts = ["""
+# Passive Persona Observation
+
+You maintain a living PERSONA.md that captures your owner's communication style — derived entirely from how they actually write, not from questions you ask them.
+
+## What you track
+
+- **Tone**: casual vs formal, warm vs direct, emoji usage
+- **Message length**: typical reply length per relationship tier
+- **Vocabulary**: common openers, closers, filler phrases
+- **Formality by context**: work vs personal vs strangers
+- **Hard limits**: actions the owner has never delegated — infer from absence of evidence
+
+## Rules
+
+- NEVER ask the owner for input. Observe only.
+- Sample only messages the owner wrote themselves — not messages they received.
+- Compute a formality score (0.0 = very casual, 1.0 = formal) from vocabulary and sentence structure.
+- Keep the Observed Style section current; update the Static Style section only if a clear new pattern emerges over multiple weeks.
+- Preserve Hard Limits conservatively — only add, never remove without clear counter-evidence across many observations.
+- Schedule weekly observation using the cron_add tool (schedule: "0 4 * * 0"). Check cron_list first — only add if a job named persona_consolidate does not already exist.
+
+## Format
+
+Write PERSONA.md as structured markdown with these sections:
+- Communication Style (static defaults, updated rarely)
+- Observed Style (auto-updated weekly from actual behavior)
+- Hard Limits (conservative — only add)
+"""]
+
+[[tools]]
+name        = "persona_read_current"
+description = "Read the current PERSONA.md before updating to preserve existing observations."
+kind        = "shell"
+command     = """curl -s "${ZX01_NODE:-http://127.0.0.1:9090}/agent/persona" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "persona_write"
+description = "Overwrite PERSONA.md with updated content. Always read current content first."
+kind        = "shell"
+command     = """jq -nc --arg c {content} '{"content":$c}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/agent/persona/write" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+content = "Full updated PERSONA.md content as a string"
+
+[[tools]]
+name        = "observe_sent_sms"
+description = "Read SMS messages sent by the owner. Used to model their natural writing style."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/sms?box=sent&limit=200" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """
+
+[[tools]]
+name        = "observe_notification_replies"
+description = "Read recent notification history to observe how the owner responds to messages from different apps and people."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/notifications/history?limit=200" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """

@@ -1,0 +1,156 @@
+[
+  {
+    "name": "bags",
+    "label": "Bags Token Launcher",
+    "description": "Launch and manage tokens on Bags.fm — trade, price-check, view claimable fees, and list on Dexscreener.",
+    "icon": "BAGS",
+    "tags": ["defi", "solana", "trading"],
+    "version": "1.1.0",
+    "requires_node": true,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/bags/SKILL.toml"
+  },
+  {
+    "name": "launchlab",
+    "label": "Raydium LaunchLab",
+    "description": "Buy and sell tokens on the Raydium LaunchLab bonding curve. Earns a 0.1% share fee on every trade routed through the node.",
+    "icon": "RAY",
+    "tags": ["defi", "solana", "trading"],
+    "version": "1.0.0",
+    "requires_node": true,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/launchlab/SKILL.toml"
+  },
+  {
+    "name": "cpmm",
+    "label": "Raydium CPMM Pool",
+    "description": "Create a Raydium CPMM liquidity pool. Pool creator earns LP fees on every swap forever.",
+    "icon": "LP",
+    "tags": ["defi", "solana", "liquidity"],
+    "version": "1.0.0",
+    "requires_node": true,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/cpmm/SKILL.toml"
+  },
+  {
+    "name": "trade",
+    "label": "Jupiter Trader",
+    "description": "Trade any token on Solana via Jupiter — swap, price check, token search, limit orders, and DCA.",
+    "icon": "JUP",
+    "tags": ["defi", "solana", "trading"],
+    "version": "1.0.0",
+    "requires_node": true,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/trade/SKILL.toml"
+  },
+  {
+    "name": "skill-manager",
+    "label": "Skill Manager",
+    "description": "Install, remove, and reload skills without an app update. Write any SKILL.toml from chat.",
+    "icon": "MGR",
+    "tags": ["skills", "extensibility"],
+    "version": "1.2.0",
+    "requires_node": false,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/skill-manager/SKILL.toml"
+  },
+  {
+    "name": "health",
+    "label": "Health & Wearables",
+    "description": "Read on-device health sensors — steps, heart rate, sleep, recovery — privately.",
+    "icon": "HLTH",
+    "tags": ["health", "sensors"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": true,
+    "url": ""
+  },
+  {
+    "name": "memory-observe",
+    "label": "Memory Observer",
+    "description": "Passively builds a persistent MEMORY.md from your activity — contacts, calendar, app usage, SMS patterns.",
+    "icon": "MEM",
+    "tags": ["memory", "context"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/memory-observe/SKILL.toml"
+  },
+  {
+    "name": "persona-observe",
+    "label": "Persona Observer",
+    "description": "Builds PERSONA.md from your communication style — tone, vocabulary, response patterns. Runs passively.",
+    "icon": "PRSO",
+    "tags": ["persona", "style"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": true,
+    "url": "https://skills.0x01.world/persona-observe/SKILL.toml"
+  },
+  {
+    "name": "zerox1-mesh",
+    "label": "0x01 Mesh",
+    "description": "Discover agents, negotiate tasks, lock escrow, deliver work, release payment — peer-to-peer on the 0x01 mesh.",
+    "icon": "MESH",
+    "tags": ["mesh", "p2p", "escrow", "solana"],
+    "version": "0.3.0",
+    "requires_node": true,
+    "pre_installed": false,
+    "url": "https://skills.0x01.world/zerox1-mesh/SKILL.toml"
+  },
+  {
+    "name": "github",
+    "label": "GitHub",
+    "description": "Search repos, read READMEs, browse issues and PRs. No API key required for public repos.",
+    "icon": "GH",
+    "tags": ["code", "search"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": false,
+    "url": "https://skills.0x01.world/github/SKILL.toml"
+  },
+  {
+    "name": "hn-news",
+    "label": "Hacker News",
+    "description": "Browse Hacker News — top stories, new posts, comments, and Ask HN threads. No API key required.",
+    "icon": "HN",
+    "tags": ["news", "tech"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": false,
+    "url": "https://skills.0x01.world/hn-news/SKILL.toml"
+  },
+  {
+    "name": "web-search",
+    "label": "Web Search",
+    "description": "Search the web and fetch page content. No API key required.",
+    "icon": "WWW",
+    "tags": ["search", "web"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": false,
+    "url": "https://skills.0x01.world/web-search/SKILL.toml"
+  },
+  {
+    "name": "weather",
+    "label": "Weather",
+    "description": "Get current weather and forecasts for any city. No API key required.",
+    "icon": "WX",
+    "tags": ["weather", "forecast"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": false,
+    "url": "https://skills.0x01.world/weather/SKILL.toml"
+  },
+  {
+    "name": "elevenlabs",
+    "label": "ElevenLabs TTS",
+    "description": "Text-to-speech via ElevenLabs — convert any text to MP3 audio, list voices, and list models. Requires ELEVENLABS_API_KEY.",
+    "icon": "TTS",
+    "tags": ["tts", "audio"],
+    "version": "1.0.0",
+    "requires_node": false,
+    "pre_installed": false,
+    "url": "https://skills.0x01.world/elevenlabs/SKILL.toml"
+  }
+]

@@ -175,6 +175,30 @@
     .count-bar span {
       color: var(--text);
     }
+
+    .skill-install-btn {
+      display: inline-block;
+      font-size: 11px;
+      color: var(--green);
+      border: 1px solid rgba(0, 230, 118, 0.35);
+      border-radius: 2px;
+      padding: 3px 10px;
+      text-decoration: none;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .skill-install-btn:hover {
+      background: rgba(0, 230, 118, 0.08);
+      border-color: var(--green);
+    }
+
+    .skill-install {
+      justify-content: space-between;
+      cursor: default;
+    }
   </style>
 </head>
 
@@ -223,7 +247,7 @@
 
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 4px; padding: 16px 20px; max-width: 560px;">
         <div style="color: var(--green); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px;">// how to install</div>
-        <p style="color: var(--text); font-size: 13px; line-height: 1.7;">Open the <strong style="color: var(--bright);">skill-manager</strong> skill (pre-installed) and say <em style="color: var(--green);">"install bags"</em> or <em style="color: var(--green);">"install trade"</em>. Your agent fetches and activates the skill instantly — no app update required.</p>
+        <p style="color: var(--text); font-size: 13px; line-height: 1.7;">Tap <strong style="color: var(--bright);">↓ Install in 01 Pilot</strong> on any skill card — the app opens and confirms the install in one tap. Or open the <strong style="color: var(--bright);">skill-manager</strong> skill and say <em style="color: var(--green);">"install bags"</em>. Your agent fetches and activates the skill instantly — no app update required.</p>
       </div>
     </div>
   </section>
@@ -267,8 +291,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install bags"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install bags"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=bags&url=https%3A%2F%2Fskills.0x01.world%2Fbags%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -289,8 +313,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install launchlab"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install launchlab"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=launchlab&url=https%3A%2F%2Fskills.0x01.world%2Flaunchlab%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -311,8 +335,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install cpmm"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install cpmm"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=cpmm&url=https%3A%2F%2Fskills.0x01.world%2Fcpmm%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -333,8 +357,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install github"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install github"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=github&url=https%3A%2F%2Fskills.0x01.world%2Fgithub%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -355,8 +379,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install hn-news"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install hn-news"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=hn-news&url=https%3A%2F%2Fskills.0x01.world%2Fhn-news%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -397,8 +421,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install trade"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install trade"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=trade&url=https%3A%2F%2Fskills.0x01.world%2Ftrade%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -419,8 +443,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install weather"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install weather"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=weather&url=https%3A%2F%2Fskills.0x01.world%2Fweather%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -441,8 +465,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install web-search"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install web-search"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=web-search&url=https%3A%2F%2Fskills.0x01.world%2Fweb-search%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 
@@ -463,8 +487,8 @@
             </div>
           </div>
           <div class="skill-install">
-            <span style="color: var(--dim);">say:</span>
-            <span class="cmd">"install zerox1-mesh"</span>
+            <span><span style="color: var(--dim);">say:</span> <span class="cmd">"install zerox1-mesh"</span></span>
+            <a class="skill-install-btn" href="zerox1://skill/install?name=zerox1-mesh&url=https%3A%2F%2Fskills.0x01.world%2Fzerox1-mesh%2FSKILL.toml">↓ Install in 01 Pilot</a>
           </div>
         </div>
 

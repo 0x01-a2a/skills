@@ -1,0 +1,80 @@
+[skill]
+name        = "memory-observe"
+version     = "1.0.0"
+description = "Passively observe owner behavior from phone data and update MEMORY.md — relationships, activity patterns, task preferences. Runs automatically. Never prompts the user."
+author      = "0x01 World"
+tags        = ["memory", "observation", "identity", "personal", "passive"]
+
+prompts = ["""
+# Passive Memory Observation
+
+You maintain a living MEMORY.md that models your owner from observed behavior — never by asking questions.
+
+## What you track
+
+- **Relationships**: contacts ranked by interaction frequency, response speed, and recency
+- **Activity patterns**: active hours, notification habits, what gets opened vs dismissed
+- **Task preferences**: price thresholds you've accepted or declined, capabilities engaged
+- **Device rhythms**: calendar density, app usage peaks, location-inferred context
+
+## Rules
+
+- NEVER ask the owner for input. Observe only.
+- Only write observations you can ground in actual data from the phone bridge.
+- Keep entries factual and concise — no speculation.
+- Preserve existing sections when updating; only overwrite what has changed.
+- The owner never sees this file directly — write for your own future use, not for display.
+- Schedule daily observation using the cron_add tool (schedule: "0 3 * * *"). Check cron_list first — only add if a job named memory_consolidate does not already exist.
+
+## Format
+
+Write MEMORY.md as structured markdown. Date-stamp each section update.
+"""]
+
+[[tools]]
+name        = "memory_read_current"
+description = "Read the current MEMORY.md to see what is already known before updating."
+kind        = "shell"
+command     = """curl -s "${ZX01_NODE:-http://127.0.0.1:9090}/agent/memory" -H "Authorization: Bearer ${ZX01_TOKEN:-}" """
+
+[[tools]]
+name        = "memory_write"
+description = "Overwrite MEMORY.md with updated content. Always read current content first to preserve existing observations."
+kind        = "shell"
+command     = """jq -nc --arg c {content} '{"content":$c}' | curl -s -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/agent/memory/write" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+content = "Full updated MEMORY.md content as a string"
+
+[[tools]]
+name        = "observe_sms_patterns"
+description = "Read recent SMS inbox to extract contact interaction patterns and response behaviors."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/sms?limit=100" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """
+
+[[tools]]
+name        = "observe_notification_log"
+description = "Read notification history to learn which apps and senders the owner engages with vs dismisses."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/notifications/history?limit=200" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """
+
+
+
+[[tools]]
+name        = "observe_calendar"
+description = "Read calendar events to learn active hours, meeting density, and schedule patterns."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/calendar?days=14" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """
+
+[[tools]]
+name        = "observe_app_usage"
+description = "Read app usage statistics to understand daily rhythm and focus periods."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/app_usage?days=7" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """
+
+[[tools]]
+name        = "observe_contacts"
+description = "Read contacts to identify known people and cross-reference with SMS/notification patterns."
+kind        = "shell"
+command     = """curl -s "${ZX01_BRIDGE:-http://127.0.0.1:9092}/phone/contacts" -H "x-bridge-token: ${ZX01_BRIDGE_TOKEN:-}" """
+

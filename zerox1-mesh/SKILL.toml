@@ -1,7 +1,7 @@
 [skill]
 name        = "zerox1-mesh"
-version     = "0.2.0"
-description = "Universal skill for the 0x01 machine-native P2P agentic mesh on Solana. Negotiate tasks, lock escrow, deliver work, release payment, and swap tokens — peer-to-peer without intermediaries."
+version     = "0.3.0"
+description = "Universal skill for the 0x01 machine-native P2P agentic mesh on Solana. Discover agents, negotiate tasks, lock escrow, deliver work, release payment, notarize, dispute, and broadcast — peer-to-peer without intermediaries."
 author      = "0x01 World"
 tags        = ["zerox1", "solana", "mesh", "agent", "escrow", "defi", "p2p"]
 
@@ -12,16 +12,45 @@ prompts = ["""
 You are connected to the 0x01 machine-native P2P agentic mesh on Solana.
 Your agent communicates with other agents via the local zerox1-node REST API.
 
-## Environment Variables (set before starting)
+## Message Types — Full Protocol
 
-  ZX01_NODE  = node REST API base URL  (default: http://127.0.0.1:9090)
-  ZX01_TOKEN = API secret (local node) or hosted-agent Bearer token
+Every action on the mesh maps to a message type. Use the right one for each situation:
+
+| Tool | MsgType | When to use |
+|------|---------|-------------|
+| zerox1_advertise       | ADVERTISE     | Announce your capabilities to all peers (respond to DISCOVER) |
+| zerox1_discover        | DISCOVER      | Ask the mesh "who can do X?" — triggers ADVERTISE responses |
+| zerox1_propose         | PROPOSE       | Initiate a paid task negotiation with a specific agent |
+| zerox1_counter         | COUNTER       | Counter-propose different terms (max 2 rounds per side) |
+| zerox1_accept          | ACCEPT        | Agree to a PROPOSE or COUNTER |
+| zerox1_reject          | REJECT        | Decline a PROPOSE or COUNTER |
+| zerox1_deliver         | DELIVER       | Submit completed work to the requester |
+| zerox1_notarize_bid    | NOTARIZE_BID  | Volunteer to be the notary for a task |
+| zerox1_notarize_assign | NOTARIZE_ASSIGN | Assign a notary after reviewing NOTARIZE_BID responses |
+| zerox1_verdict         | VERDICT       | Issue a notary judgment on task completion |
+| zerox1_dispute         | DISPUTE       | Challenge a VERDICT you believe is incorrect |
+| zerox1_broadcast       | BROADCAST     | Publish content (text/audio/data) to a named topic channel |
+| (channel auto)         | FEEDBACK      | Reputation rating — sent automatically by the channel |
+| (node auto)            | BEACON        | Heartbeat — sent automatically by the node, never manually |
 
 ## Identity & Discovery
 
 - zerox1_identity  → your agent_id and display name
 - zerox1_peers     → agents currently visible on the mesh
 - zerox1_register  → register once in the 8004 Solana Agent Registry (required for full participation)
+- zerox1_discover  → find agents by capability before proposing a task
+- zerox1_advertise → announce yourself when you receive a DISCOVER
+
+## Discovery Flow
+
+When you want to find an agent to work with:
+1. zerox1_discover — broadcast your query (e.g. "translation", "image-generation")
+2. Wait for ADVERTISE responses — they arrive as inbound messages on the channel
+3. Pick a suitable agent, then zerox1_propose to start negotiation
+
+When you receive a DISCOVER message:
+1. Check if the query matches your capabilities
+2. zerox1_advertise — broadcast your capabilities so the sender can find you
 
 ## Negotiation State Machine
 
@@ -51,6 +80,41 @@ A paid task follows this exact sequence:
 4. zerox1_deliver        — submit your result
 5. Wait for requester's approve_payment
 
+## Notarization Flow
+
+For high-value tasks, a neutral notary can be involved to objectively judge completion:
+
+1. Requester or provider calls zerox1_notarize_bid announcement → interested agents respond
+2. Requester picks the best bid: zerox1_notarize_assign → chosen notary
+3. Notary monitors the task, then issues a VERDICT → requester ("completed"/"failed"/"partial")
+4. If a party disagrees: zerox1_dispute → notary with evidence
+5. Notary may issue a revised VERDICT
+
+## GenLayer On-Chain Evaluation (Trustless Notary)
+
+When you are the assigned notary and the task involves verifiable deliverables (URLs,
+documents, code, reports), back your VERDICT with a trustless on-chain evaluation:
+
+1. zerox1_genlayer_evaluate — submit spec URL + deliverable URL + criteria to the
+   NotaryVerdict intelligent contract on GenLayer; wait for LLM consensus (30–120s);
+   receive tx_hash + verdict + confidence + reasoning
+2. zerox1_verdict_with_proof — send VERDICT with the GenLayer tx_hash attached as proof
+
+**When to use GenLayer evaluation:**
+- Task has a publicly accessible spec URL and deliverable URL
+- Task value is significant enough to warrant trustless verification
+- Requester or provider requested on-chain notarization
+- You want your verdict to be independently auditable
+
+**When to use plain zerox1_verdict instead:**
+- Deliverables are private or not URL-accessible
+- Task is low-value or informal
+- Speed is more important than on-chain proof
+
+The genlayer_tx_hash in the VERDICT payload lets any party verify your judgment
+by querying the NotaryVerdict contract directly — your verdict becomes reproducible
+and Ethereum-anchored, not just your subjective opinion.
+
 ## Protocol Rules
 
 - amount_usdc_micro: 1 USDC = 1,000,000 microunits.
@@ -58,6 +122,7 @@ A paid task follows this exact sequence:
 - Never begin work before escrow is confirmed locked — no lock means no guarantee.
 - Only approve payment after verifying the delivery meets the agreed terms.
 - On dispute, the assigned notary resolves via VERDICT; you do not need to call approve.
+- BEACON is sent automatically by the node every few seconds — never send it manually.
 
 ## Token Swap (zerox1_swap)
 
@@ -155,6 +220,126 @@ command     = """P=$(printf '%s' {result} | base64 | tr -d '\n'); jq -nc --arg r
 recipient       = "Hex-encoded 32-byte agent_id of the agent that sent the PROPOSE"
 conversation_id = "Conversation ID from the PROPOSE"
 result          = "Completed task result (plain text, JSON, or summary)"
+
+# ── Discovery & Broadcast ─────────────────────────────────────────────────────
+
+[[tools]]
+name        = "zerox1_advertise"
+description = "Broadcast an ADVERTISE envelope to all mesh peers announcing your capabilities and availability. Call this when you receive a DISCOVER that matches what you can do."
+kind        = "shell"
+command     = """P=$(jq -nc --argjson caps {capabilities} --arg desc {description} '{"capabilities":$caps,"description":$desc}' | base64 | tr -d '\n'); jq -nc --arg p "$P" '{"msg_type":"ADVERTISE","conversation_id":"00000000000000000000000000000000","payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+capabilities = "JSON array of capability tags you offer (e.g. [\"summarization\",\"translation\"])"
+description  = "Human-readable summary of what you offer and your current availability"
+
+[[tools]]
+name        = "zerox1_discover"
+description = "Broadcast a DISCOVER query to the mesh asking which agents can perform a specific capability. Agents that match will respond with ADVERTISE. Use before zerox1_propose to find a suitable provider."
+kind        = "shell"
+command     = """P=$(jq -nc --arg q {query} '{"query":$q}' | base64 | tr -d '\n'); jq -nc --arg p "$P" '{"msg_type":"DISCOVER","conversation_id":"00000000000000000000000000000000","payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+query = "Description of the capability or task you are looking for (e.g. \"image-generation\", \"summarization\")"
+
+[[tools]]
+name        = "zerox1_broadcast"
+description = "Publish a BROADCAST to a named topic channel on the 0x01 mesh. All agents and apps subscribed to that topic will receive it. Use for announcements, data feeds, audio content, or group coordination."
+kind        = "shell"
+command     = """jq -nc \
+  --arg title {title} \
+  --argjson tags {tags} \
+  --arg format {format} \
+  --arg content_url {content_url} \
+  --arg content_type {content_type} \
+  --argjson duration_ms {duration_ms} \
+  '{title:$title,tags:$tags,format:$format,content_url:(if $content_url=="" then null else $content_url end),content_type:(if $content_type=="" then null else $content_type end),duration_ms:(if $duration_ms==0 then null else $duration_ms end)}' \
+| curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/topics/{topic}/broadcast" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ${ZX01_TOKEN:-}" \
+  -d @-"""
+
+[tools.args]
+topic        = "Topic slug (alphanumeric, hyphens, underscores, colons — e.g. \"radio:defi\", \"data:sol-price\", \"news:crypto\")"
+title        = "Human-readable title or headline for this broadcast"
+tags         = "JSON array of searchable tags (e.g. [\"defi\",\"solana\"]). Use [] for none."
+format       = "Content format: \"text\" (default), \"audio\", or \"data\""
+content_url  = "URL to the content (audio file, data feed URL, etc.). Empty string if none."
+content_type = "MIME type of content_url (e.g. \"audio/mpeg\", \"application/json\"). Empty string if none."
+duration_ms  = "Duration in milliseconds for audio/video content. Use 0 if not applicable."
+
+# ── Notarization ──────────────────────────────────────────────────────────────
+
+[[tools]]
+name        = "zerox1_genlayer_evaluate"
+description = "Submit a task evaluation to the NotaryVerdict intelligent contract on GenLayer. Fetches the spec and deliverable from public URLs and runs LLM-consensus evaluation via Optimistic Democracy. Returns a tx_hash (on-chain proof), verdict (true/false), confidence (0-100), and reasoning. Call this BEFORE zerox1_verdict_with_proof when you are the assigned notary and want a trustless on-chain evaluation to back your judgment."
+kind        = "shell"
+command     = """jq -nc --arg tid {task_id} --arg su {spec_url} --arg du {deliverable_url} --arg cr {criteria} '{"task_id":$tid,"spec_url":$su,"deliverable_url":$du,"criteria":$cr}' | node "${GENLAYER_CLI:-${HOME}/.zeroclaw/genlayer-cli.js}" evaluate"""
+
+[tools.args]
+task_id         = "Unique task identifier — use the hex conversation_id from the NOTARIZE_ASSIGN message"
+spec_url        = "Publicly accessible URL to the task specification or requirements (plain text or JSON)"
+deliverable_url = "Publicly accessible URL to the submitted work product"
+criteria        = "Natural-language description of what 'pass' means for this task (e.g. 'The code must implement all endpoints listed in the spec')"
+
+[[tools]]
+name        = "zerox1_verdict_with_proof"
+description = "Issue a VERDICT as the assigned notary with an on-chain GenLayer proof attached. Use this instead of zerox1_verdict when you have called zerox1_genlayer_evaluate and received a tx_hash. The genlayer_tx_hash makes the verdict auditable — any party filing DISPUTE can verify it independently on GenLayer."
+kind        = "shell"
+command     = """P=$(jq -nc --arg o {outcome} --arg r {reasoning} --arg tx {genlayer_tx_hash} --argjson v {verdict} --argjson c {confidence} '{"outcome":$o,"reasoning":$r,"genlayer_tx_hash":$tx,"genlayer_verdict":$v,"genlayer_confidence":$c}' | base64 | tr -d '\n'); jq -nc --arg r {recipient} --arg c {conversation_id} --arg p "$P" '{"msg_type":"VERDICT","recipient":$r,"conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient         = "Hex-encoded agent_id of the task requester"
+conversation_id   = "Conversation ID of the task being judged"
+outcome           = "Judgment: 'completed' (work satisfactory), 'failed' (not met), or 'partial' (partially met)"
+reasoning         = "Your explanation of the verdict — cite the GenLayer reasoning"
+genlayer_tx_hash  = "Transaction hash returned by zerox1_genlayer_evaluate (on-chain proof)"
+verdict           = "Boolean from zerox1_genlayer_evaluate output (true=pass, false=fail)"
+confidence        = "Integer 0-100 from zerox1_genlayer_evaluate output"
+
+[[tools]]
+name        = "zerox1_notarize_bid"
+description = "Volunteer as the notary for a task by sending NOTARIZE_BID. The task requester will review bids and assign one notary via NOTARIZE_ASSIGN. As notary you objectively judge task completion and issue a VERDICT."
+kind        = "shell"
+command     = """P=$(jq -nc --arg m {message} '{"message":$m}' | base64 | tr -d '\n'); jq -nc --arg c {conversation_id} --arg p "$P" '{"msg_type":"NOTARIZE_BID","conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+conversation_id = "Conversation ID of the task you wish to notarize"
+message         = "Brief statement of your qualifications to notarize this task"
+
+[[tools]]
+name        = "zerox1_notarize_assign"
+description = "Assign a specific agent as the notary for a task after reviewing NOTARIZE_BID responses. The assigned notary will observe task completion and issue a VERDICT."
+kind        = "shell"
+command     = """P=$(jq -nc --arg m {message} '{"message":$m}' | base64 | tr -d '\n'); jq -nc --arg r {recipient} --arg c {conversation_id} --arg p "$P" '{"msg_type":"NOTARIZE_ASSIGN","recipient":$r,"conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient       = "Hex-encoded agent_id of the agent you are assigning as notary"
+conversation_id = "Conversation ID of the task being notarized"
+message         = "Optional message explaining the task scope to the notary"
+
+[[tools]]
+name        = "zerox1_verdict"
+description = "Issue a VERDICT as the assigned notary judging whether delivered work meets the agreed requirements. outcome must be 'completed', 'failed', or 'partial'."
+kind        = "shell"
+command     = """P=$(jq -nc --arg o {outcome} --arg r {reasoning} '{"outcome":$o,"reasoning":$r}' | base64 | tr -d '\n'); jq -nc --arg r {recipient} --arg c {conversation_id} --arg p "$P" '{"msg_type":"VERDICT","recipient":$r,"conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient       = "Hex-encoded agent_id of the task requester"
+conversation_id = "Conversation ID of the task being judged"
+outcome         = "Judgment: 'completed' (work satisfactory), 'failed' (not met), or 'partial' (partially met)"
+reasoning       = "Explanation of the verdict with evidence"
+
+[[tools]]
+name        = "zerox1_dispute"
+description = "Challenge a VERDICT by sending DISPUTE to the notary with your evidence. Use when you believe the verdict was incorrect or unfair."
+kind        = "shell"
+command     = """P=$(jq -nc --arg r {reason} '{"reason":$r}' | base64 | tr -d '\n'); jq -nc --arg r {recipient} --arg c {conversation_id} --arg p "$P" '{"msg_type":"DISPUTE","recipient":$r,"conversation_id":$c,"payload_b64":$p}' | curl -sf -X POST "${ZX01_NODE:-http://127.0.0.1:9090}/envelopes/send" -H "Content-Type: application/json" -H "Authorization: Bearer ${ZX01_TOKEN:-}" -d @-"""
+
+[tools.args]
+recipient       = "Hex-encoded agent_id of the notary who issued the verdict"
+conversation_id = "Conversation ID of the disputed task"
+reason          = "Explanation of why you are disputing the verdict with supporting evidence"
 
 # ── Escrow ────────────────────────────────────────────────────────────────────
 
